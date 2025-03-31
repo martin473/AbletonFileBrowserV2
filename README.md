@@ -6,6 +6,8 @@ Difference from v1: Used WYSIWYG Editor QT Creator instead of PyQt6 for GUI Deve
 
 What this software does:
 Select a folder, search for all .als files. Open files directly from this browser. Create a database of every file. Search, sort, favorite, tag and more. Allows for functionality ableton 11 and earlier versions did not have.
+![Screenshot 2025-03-30 at 7 02 47 PM](https://github.com/user-attachments/assets/32ea6f71-91b5-4161-9716-7a1c530541f5)
+![Screenshot 2025-03-30 at 7 01 47 PM](https://github.com/user-attachments/assets/f7e4ee3c-9892-4133-b8e1-92fe0db63099)
 
 Why it was deprecated:
 SDLC for multiplatform consumer software with python and QT Creator is cumbersome. Flutter and a few other modern code paradigms are better suited for this. Ableton Live 12 includes tagging and a few other features. Most of the functionality in this software can be directly replicated or hacked together out of those features. Future development for this type of software would make more sense as a direct plugin or addon to Ableton.
