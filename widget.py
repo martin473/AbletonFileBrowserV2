@@ -1,11 +1,15 @@
 # This Python file uses the following encoding: utf-8
 import sys, argparse, time, os, json
 # using subprocess instead of os call is neater apparently and cross platform, but I'm getting permissions errors with it on mac and not with os
+# a good refactor for this code would be to properly implement qt's model view paradigm and signal paradigm and to have a better control on where the db is instantiated within this file
+# current db paradigm is when db is called, instantiate it locally, update the db, fetch the value, and update the GUI with the fetched value, fpath is primary key
 
+#pyside imports
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QTableWidgetItem, QLabel, QInputDialog
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PySide6.QtCore import Qt
 
+#other imports
 from abletoolz import cli
 import re
 from tinydb import TinyDB, where, Query
@@ -16,7 +20,7 @@ from tinydb import TinyDB, where, Query
 #     pyside2-uic form.ui -o ui_form.py
 from ui_form import Ui_Widget
 
-
+#generates a placeholder image for star ratings, feature was replaced with heart emoji favorites
 class ImgWidget1(QLabel): #hardcoded image,
 
     def __init__(self, parent=None):
@@ -29,11 +33,13 @@ class ImgWidget1(QLabel): #hardcoded image,
             Qt.KeepAspectRatio) #set image size here x, y as 100, 20, have it autosize to parent size
         self.setPixmap(scaled)
 
+#uses os and local method to open a folder
 def openProject(row, column):
     if column == 0: #checks for proper cell   
         os.system("open " + "\'" + getFpath(row)  + "\'") #need another command for windows and checking os type
         #os.system needs filepath whitespace to be formatted like "open '/this/is/ your filepath'"
 
+#updates favorite/unfavorite on click
 def setFavorite(row, column):
     if column == 1: #checks for proper cell
         #get db
@@ -45,13 +51,15 @@ def setFavorite(row, column):
         fPath = getFpath(row)
 
         #fetch and update line
+        #flips boolean value for favorite in db table
         newRow = db.search(where("Path") == fPath)
         db.update({"Favorite": not newRow[0]["Favorite"]}, where("Path") == fPath)
 
-        #fetch updated line and display
+        #fetch updated favorite info and display
         newRow = db.search(where("Path") == fPath)
         widget.ui.tableWidget.setItem(row, 1, QTableWidgetItem( getFavIcon(newRow[0]["Favorite"]) ))
 
+# lets user enter csv tags on click, string type, not enforced
 def setTags(row, column):
     if column == 2: #checks for proper cell
         #get db
@@ -78,6 +86,7 @@ def setTags(row, column):
         else:
             print("tags not updated")
 
+# returns proper fav icon based on favorite T/F value in db
 def getFavIcon(favorite):
         if favorite == True:
             return "♥️"
@@ -86,15 +95,17 @@ def getFavIcon(favorite):
         else:
             return "Empty"
 
+# fpath is pkey, grabs hardcoded column location based on row that is clicked on, returning fpath as pkey for use in db calls
 def getFpath(row):
     #would like this to grab the column that has fpath so I can move it around if needed, it's hard coded
     #also item works, itemAt always returns item 0,0 https://stackoverflow.com/questions/2984287/qtablewidgetitemat-returns-seemingly-random-items
     return widget.ui.tableWidget.item(row, 5).text()
 
-
+#uses ctime, which is not properly implemented currently. Sorting on ctime gives strange results
 def readableTime(timestamp):
     return time.ctime(timestamp)
 
+# button click starts open directory system dialogue, selecting a folder runs local methods that update local data, populate a db with that data, and then update the GUI with the db data
 def openFolder(self): #not sure if C dir will mess things up on other systems, I'd like to remove it
         folder = QFileDialog.getExistingDirectory(None, 'Select a folder:', 'C:\\', QFileDialog.ShowDirsOnly)
         try:
@@ -107,6 +118,9 @@ def openFolder(self): #not sure if C dir will mess things up on other systems, I
         except Exception as e:
             print("Error: ", e)
 
+# uses a parent/root folder location to use abletoolz cli method to get all of the subfolders and .als files
+# creates GUI table headers
+# refactoring could clean this method up and separate it into multiple simpler methods
 def makeTable(self, folder): #deleteDummy image when importing actual file ratings
 
     #Load parent dir
@@ -127,6 +141,7 @@ def makeTable(self, folder): #deleteDummy image when importing actual file ratin
     except Exception as e:
         print("Table creation error", e)
 
+# same as make table above except the software tries this first to see if there's a pre-existing db to load (so the user doesn't have to create a new one every time they start the software)
 def makeTableInit(self): #deleteDummy image when importing actual file ratings
 
     #open db
@@ -146,6 +161,7 @@ def makeTableInit(self): #deleteDummy image when importing actual file ratings
     except Exception as e:
         print("Table creation error", e)
 
+#creates a tinyDB instance variable and creates a db file on local system, uses abletoolz cli method to populate db with data, uses os methods to get file data
 def populateDb(self, folder): #deleteDummy image when importing actual file ratings
     #gets filetree as list
     try:
@@ -170,6 +186,7 @@ def populateDb(self, folder): #deleteDummy image when importing actual file rati
     except Exception as e:
         print("Table population error", e)
 
+#assumes db exists, is similar to maketableinit, goes through an existing db and fills table columns with appropriate data
 def fillTable(self):
     try:
         db = TinyDB('db.json')
@@ -197,6 +214,8 @@ def fillTable(self):
     except Exception as e: #potential better way to organize this? https://stackoverflow.com/questions/6785481/how-to-implement-a-filter-option-in-qtablewidget
         print("Table population error", e)
 
+# enables search bar to do basic text query powered by tinydb methods. Could be a source of some errors. Clears table and fills it with data returned from the tinydb search
+# searching for nothing returns the entire db and is the equivalent of clearing the search bar to get everything
 def searchFiles():
     userSearch = widget.ui.searchBar.text()
     if userSearch:
@@ -240,6 +259,7 @@ def searchFiles():
 
     print(widget.ui.searchBar.text())
 
+#main widget logic, creates the main GUI widget, creates and displays components and connects methods to components and buttons, runs init db when started to try to fill table with pre-existing data calls maketableinit as well
 class Widget(QWidget):
 
     def __init__(self, parent=None):
@@ -274,6 +294,7 @@ class Widget(QWidget):
         #a is not used, not sure what it's passing in automatically
         return self.dummyImage
 
+#main logic that creates the application, the GUI widget, and calls init methods
 if __name__ == "__main__":    
     app = QApplication(sys.argv)
     widget = Widget()
