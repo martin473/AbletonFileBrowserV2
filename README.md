@@ -1,4 +1,7 @@
 # AbletonFileBrowserV2
+Required libraries:
+I may be missing a few but this basically runs with abletoolz, pyside6 and a few other packages automatically installed with qt creator on mac
+
 Difference from v1: Used WYSIWYG Editor QT Creator instead of PyQt6 for GUI Development. QT Creator uses Pyside6 which is functionally similar
 
 What this software does:
